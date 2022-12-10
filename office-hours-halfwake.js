@@ -29,67 +29,47 @@ or implied.
 import xapi from 'xapi';
 
 /*********************************************************
- * Configure the settings below
-**********************************************************/
-
-const config = {};
-
-/*********************************************************
  * Below contains all macros functions
 **********************************************************/
 
+// Monitor when the device enters standby
 xapi.Status.Standby.State.on(manageStandby);
 
 async function manageStandby(event){
   console.log('Standby State: ' +event);
   if(event != 'Standby'){ return }
-
-  const officeHours = await xapi.Config.Time.OfficeHours.Enabled.get();
-
-  if(officeHours == 'False') {
-    console.log('Office Hours Disabled');
-    console.log('Switching to halfwake')
-    xapi.Command.Standby.Halfwake()
+  if(await xapi.Config.Time.OfficeHours.Enabled.get() == 'False') {
+    console.log('Office Hours Disabled, doing nothing');
     return;
   }
-  console.log('Office Hours Enabled');
-
   const date = new Date();
-  const workWeek = await xapi.Config.Time.OfficeHours.WorkWeek.get()
-  
+  const workWeek = await xapi.Config.Time.OfficeHours.WorkWeek.get() 
+  console.log(workWeek);
   if(!checkWorkday(date, workWeek)) {
     console.log('Not a work day, doing nothing');
     return;
   }
-
   const end = await xapi.Config.Time.OfficeHours.WorkDay.End.get();
   const start = await xapi.Config.Time.OfficeHours.WorkDay.Start.get()
-
-  if(checkWorkhours(date, start, end)) {
-    console.log('Currently within work hours, switching to halfwake')
-    xapi.Command.Standby.Halfwake();
-  } else {
+  const minutes = checkWorkhours(date, start, end);
+  if(minutes < 0 ) {
     console.log('Not within work hours, doing nothing')
-  }
-  
+    return;
+  } 
+  console.log('Currently within work hours, switching to halfwake')
+  console.log('Number of minutes remaining: ' +minutes)
+  xapi.Command.Standby.ResetTimer({ Delay: minutes>480 ? 480 : minutes });
 }
 
 function checkWorkday(date, workWeek){
-    const weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-    return workWeek[weekdays[date.getDay()-1]] == 'True';
+  const weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+  return workWeek[weekdays[date.getDay()-1]] == 'True';
 }
 
 function checkWorkhours(date, start, end){
-
-  let startDate = new Date(date.getTime());
-  startDate.setHours(start.split(":")[0]);
-  startDate.setMinutes(start.split(":")[1]);
-  startDate.setSeconds(0);
-
-  let endDate = new Date(date.getTime());
-  endDate.setHours(end.split(":")[0]);
-  endDate.setMinutes(end.split(":")[1]);
-  endDate.setSeconds(0);
-
-  return startDate < date && endDate > date
+  const startDate = new Date(date.getTime());
+  const endDate = new Date(date.getTime());
+  startDate.setHours(start.split(":")[0],start.split(":")[1],0);
+  endDate.setHours(end.split(":")[0],end.split(":")[1],0);
+  return (startDate > date) ? -1 : Math.round((endDate - date)/1000/60)
 }
