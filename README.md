@@ -1,5 +1,10 @@
 # Office Hours Halfwake Macro
+
+Welcome to our WXSD DEMO Repo!
+
 This is a Webex Device macro which prevents the device from entering standby during office hours. This ensures that you get access to People Count information during office hours which would normally show as ``-1`` when the device is in standby.
+
+*Everything included is for demo and Proof of Concept purposes only. Your use of the site is solely at your own risk. This site may contain links to third party content, which we do not warrant, endorse, or assume liability for. These demos are for Cisco Webex usecases, but are not Official Cisco Webex Branded demos.
 
 ## Requirements
 
